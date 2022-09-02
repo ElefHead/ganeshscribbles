@@ -34,7 +34,7 @@ url: "https://ganeshscribbles.online" # the base hostname & protocol for your si
 #
 # 3. You must replace the parameter `baseurl` in _action_files/settings.ini with the same value as you set here but WITHOUT QUOTES.
 #
-baseurl: "" # the subpath of your site, e.g. "/blog".
+baseurl: # the subpath of your site, e.g. "/blog".
 
 # Github and twitter are optional:
 minima:
@@ -43,7 +43,7 @@ minima:
     github: ElefHead
 
 # Set this to true to get LaTeX math equation support
-use_math: false
+use_math:
 
 # Set this to true to display the summary of your blog post under your title on the Home page.
 show_description: true
@@ -64,6 +64,7 @@ exclude:
   - docker-compose.yml
   - action.yml
   - Makefile
+  - settings.ini
 
 # this setting allows you to keep pages organized in the _pages folder
 include:
@@ -122,5 +123,3 @@ feed:
   posts_limit: 5 #default posts_limit: 10
   excerpt_only: true
   
-exclude:
-  - settings.ini

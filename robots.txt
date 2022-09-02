@@ -1,1 +1,1 @@
-Sitemap: https://elefhead.github.io/ganeshscribbles/sitemap.xml
+Sitemap: https://ganeshscribbles.online/sitemap.xml

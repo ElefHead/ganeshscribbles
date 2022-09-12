@@ -124,12 +124,12 @@ window.onload = wrap_img;
 <div class="cell border-box-sizing text_cell rendered">
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>I have been using <a href="https://www.mlflow.org/docs/latest/index.html">Mlflow</a> for a while now to track experimentation and model artifact lineage. While setting up codebases to use mlflow, some design decisions had to be made that influenced the successful logging of all metrics, parameters, artifacts, and the addition of the model artifacts to the model registry. Broadly, these are:</p>
+<p>I have been using <a href="https://www.mlflow.org/docs/latest/index.html">Mlflow</a> for a while now to track experimentation and model artifact lineage. While setting up codebases to use mlflow, I had to make some design decisions that influenced the successful logging of all metrics, parameters, artifacts, and the addition of the model artifacts to the model registry. Broadly, these were:</p>
 <ol>
 <li>The intended pattern to run projects</li>
 <li>Logging artifacts the right way </li>
 </ol>
-<p>I wanted to draw out a few of these by modifying a script and adding mlflow logging to it. Some of these choices become <em>gotchas</em> while working with large codebases that have long data loading and training periods, and depending on the task and compute it could be expensive.</p>
+<p>I wanted to draw out a few of these by adding mlflow logging to a small script. Some of these choices become <em>gotchas</em> while working with large codebases that have long data loading and training periods, and depending on the task and compute it could be expensive.</p>
 
 </div>
 </div>

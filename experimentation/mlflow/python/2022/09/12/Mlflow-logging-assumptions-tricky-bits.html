@@ -656,8 +656,8 @@ We can use this to change <code>iterate</code></p>
 <h1 id="Final-Thoughts-and-Conclusion">
 <a class="anchor" href="#Final-Thoughts-and-Conclusion" aria-hidden="true"><span class="octicon octicon-link"></span></a>Final Thoughts and Conclusion<a class="anchor-link" href="#Final-Thoughts-and-Conclusion"> </a>
 </h1>
-<p>These were a few tricky parts that I encountered while implementing mlflow logging in few codebases. Another quick tip is to use artifact folders with epochs to log multiple artifacts or models that can be individually registered, but I'll save elaboration on that for a different post.</p>
-<p>A question I found myself asking very often was "do I need to support both fluent API as well as MLproject"? The way I think about it is as follows:</p>
+<p>These were some of the tricky parts that I encountered while implementing mlflow logging in few codebases. Another quick tip is to use artifact folders with epochs to log multiple artifacts or models that can be individually registered, but I'll save elaboration on that for a future post.</p>
+<p>A question I found myself asking very often was "do I need to support both fluent API as well as MLproject"? The following influences my thoughts on it.</p>
 <p><a href="https://hamel.dev/">Hamel Husain</a> in <a href="https://youtu.be/GHk5HMW4XMA">his talks about evaluating ML Tooling</a> mentions that good tooling should have as little <em>Domain Specific Language (DSL)</em> as possible. And the <code>MLproject</code> file, while it has it's uses, is definitely DSL. It is a file that we use only for the purpose of interacting with <code>mlflow cli</code> and it forces users to learn how to specify the file, in addition to already learning to use the mlflow python package.</p>
 <p>That being said, my instinct as a maintainer is to enable usage while also respecting my time. Therefore, while it could be slightly more tedious to enable support for both patterns of running mlflow logging, it could also be worth the extra effort if the codebase could benefit users interacting with it using mlflow.</p>
 <ul>

@@ -1,1 +1,0 @@
-Hi! My name is Ganesh and I am a Machine Learning Engineer with expertise in creating tools to ease developing and serving new models. 

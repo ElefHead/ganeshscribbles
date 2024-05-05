@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url>
-<loc>https://ganeshscribbles.online/experimentation/mlflow/python/2022/09/12/Mlflow-logging-assumptions-tricky-bits.html</loc>
-<lastmod>2022-09-12T00:00:00-05:00</lastmod>
-</url>
-<url>
-<loc>https://ganeshscribbles.online/about/</loc>
-</url>
-<url>
-<loc>https://ganeshscribbles.online/</loc>
-</url>
-<url>
-<loc>https://ganeshscribbles.online/search/</loc>
-</url>
-<url>
-<loc>https://ganeshscribbles.online/categories/</loc>
-</url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://ganeshscribbles.online/about.html</loc>
+    <lastmod>2024-05-05T22:49:08.240Z</lastmod>
+  </url>
+  <url>
+    <loc>https://ganeshscribbles.online/posts/mlflow-logging/2022-09-12-mlflow-logging-design-decisions-tricky-parts.html</loc>
+    <lastmod>2024-05-05T22:33:14.849Z</lastmod>
+  </url>
+  <url>
+    <loc>https://ganeshscribbles.online/index.html</loc>
+    <lastmod>2024-05-05T22:50:52.010Z</lastmod>
+  </url>
 </urlset>

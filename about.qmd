@@ -1,0 +1,17 @@
+---
+title: "About"
+about:
+  template: jolla
+  links:
+    - icon: twitter
+      text: Twitter
+      href: https://twitter.com/Elefhead
+    - icon: linkedin
+      text: LinkedIn
+      href: https://linkedin.com/in/ganeshjcs
+    - icon: github
+      text: Github
+      href: https://github.com/ElefHead/
+---
+
+Hi! My name is Ganesh and I am a Machine Learning Engineer with expertise in creating tools to ease developing and serving new models. 

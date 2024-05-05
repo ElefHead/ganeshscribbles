@@ -1,0 +1,21 @@
+project:
+  type: website
+
+website:
+  title: "ganeshscribbles"
+  navbar:
+    right:
+      - about.qmd
+      - icon: twitter
+        href: https://twitter.com/Elefhead
+      - icon: linkedin
+        href: https://linkedin.com/in/ganeshjcs
+      - icon: github
+        href: https://github.com/ElefHead/
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+
+
+

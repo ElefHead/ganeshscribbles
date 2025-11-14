@@ -6,8 +6,6 @@ website:
   navbar:
     right:
       - about.qmd
-      - icon: twitter
-        href: https://twitter.com/Elefhead
       - icon: linkedin
         href: https://linkedin.com/in/ganeshjcs
       - icon: github

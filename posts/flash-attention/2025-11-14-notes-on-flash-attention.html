@@ -446,7 +446,8 @@ Note
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>While L1 as well as L2 caches can be considered on-chip SRAMs, we should go by the L1 (shared memory) size for deciding block sizes based on how <a href="https://modal.com/gpu-glossary/device-software/thread-hierarchy">blocks and SMs interact</a> and how <a href="https://modal.com/gpu-glossary/perf/bank-conflict">resource sharing affects</a> <a href="https://modal.com/gpu-glossary/perf/occupancy">occupancy</a>.</p>
+<p>While L1 as well as L2 are “on-chip”, SRAM is typically the L1 (shared memory). We use this size for deciding block sizes taking into consideration how <a href="https://modal.com/gpu-glossary/device-software/thread-hierarchy">blocks and SMs interact</a> and how <a href="https://modal.com/gpu-glossary/perf/bank-conflict">resource sharing affects</a> <a href="https://modal.com/gpu-glossary/perf/occupancy">occupancy</a>. The L2 cache is not directly controllable by the programmer.<br>
+In the paper, the authors typically assume <span class="math inline">\(M\)</span> or SRAM memory to be approximately 100KB.</p>
 </div>
 </div>
 <p>Just by looking at these numbers, there a few things that we can expect about performance gains:</p>

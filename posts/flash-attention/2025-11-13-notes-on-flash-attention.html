@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2025-11-13">
+<meta name="description" content="My notes as I go through the FlashAttention papers and the various implementations.">
+
+<title>Notes on FlashAttention – ganeshscribbles</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-0b37c64f34216b628666a8dac638b53b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">ganeshscribbles</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/Elefhead"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://linkedin.com/in/ganeshjcs"> <i class="bi bi-linkedin" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/ElefHead/"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Notes on FlashAttention</h1>
+                  <div>
+        <div class="description">
+          My notes as I go through the FlashAttention papers and the various implementations.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">inference</div>
+                <div class="quarto-category">mlsys</div>
+                <div class="quarto-category">performance</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">November 13, 2025</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#flashattention-1" id="toc-flashattention-1" class="nav-link active" data-scroll-target="#flashattention-1">FlashAttention-1</a>
+  <ul class="collapse">
+  <li><a href="#standard-attention" id="toc-standard-attention" class="nav-link" data-scroll-target="#standard-attention">Standard Attention</a>
+  <ul class="collapse">
+  <li><a href="#standard-attention-algorithm" id="toc-standard-attention-algorithm" class="nav-link" data-scroll-target="#standard-attention-algorithm">Standard Attention Algorithm</a></li>
+  </ul></li>
+  <li><a href="#flashattention" id="toc-flashattention" class="nav-link" data-scroll-target="#flashattention">FlashAttention</a>
+  <ul class="collapse">
+  <li><a href="#tiling-for-attention-outputs-with-respect-to-blocks" id="toc-tiling-for-attention-outputs-with-respect-to-blocks" class="nav-link" data-scroll-target="#tiling-for-attention-outputs-with-respect-to-blocks">Tiling for attention outputs with respect to blocks</a></li>
+  <li><a href="#re-computation-of-s-and-p-for-backward-pass" id="toc-re-computation-of-s-and-p-for-backward-pass" class="nav-link" data-scroll-target="#re-computation-of-s-and-p-for-backward-pass">Re-computation of S and P for backward pass</a></li>
+  <li><a href="#flashattention-algorithm" id="toc-flashattention-algorithm" class="nav-link" data-scroll-target="#flashattention-algorithm">FlashAttention Algorithm</a></li>
+  <li><a href="#implications-of-the-io-complexity" id="toc-implications-of-the-io-complexity" class="nav-link" data-scroll-target="#implications-of-the-io-complexity">Implications of the IO Complexity</a><a name="implications-of-the-io-complexity" class="nav-link" data-scroll-target="undefined"></a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<section id="flashattention-1" class="level1">
+<h1>FlashAttention-1</h1>
+<p>In this <a href="https://arxiv.org/abs/2205.14135">2022 paper</a>, the authors ask if efficiency in computing exact attention can enable transformers parse larger sequences and help overcome runtime and memory challenges for long sequences.<br>
+They note that</p>
+<ol type="1">
+<li>approximate attention techiques, a common approach to overcoming the quadratic time and space complexity of self-attention, tend to ignore overheads from memory access (IO speeds in GPUs).<br>
+</li>
+<li>as shown in <a href="https://arxiv.org/abs/2007.00072">Ivanov et. al</a>, most operations on modern <a href="https://modal.com/gpu-glossary/perf/performance-bottleneck">GPUs are bottlenecked</a> by the <a href="https://modal.com/gpu-glossary/perf/memory-bandwidth">memory bandwidth</a> and fall short of using the available compute efficiently.</li>
+</ol>
+<p>Thus, the authors argue for using operations that account for the reads and writes to different levels of fast and slow memory, i.e.&nbsp;introduction of IO-awareness in algorithms, on modern accelerators <a href="https://modal.com/gpu-glossary/device-hardware/gpu-ram">(eg. SRAM vs High Bandwidth Memory in modern GPUs)</a>. With this, they focus on the attention computation to</p>
+<ol type="1">
+<li>reduce the number of memory access by computing the exact softmax without multiple accesses to the whole input. This helps speed up the forward pass during training as well as inference.</li>
+<li>not store the large intermediate attention matrix for the backward pass. This speeds up the gradient computation during training.</li>
+</ol>
+<p>The authors introduce the <code>FlashAttention</code> <a href="https://modal.com/gpu-glossary/device-software/kernel">kernel</a> that uses <a href="https://www.oreilly.com/library/view/programming-massively-parallel/9780323984638/xhtml/Ch005_93-121_B9780323912310000185.xhtml">tiling</a> to compute softmax over <a href="https://modal.com/gpu-glossary/device-software/thread-block">blocks</a> of the input using a softmax reduction that enables both (1) the incremental calculation of the final softmax matrix without multiple global memory access, as well as (2) storage of block statistics instead of the large intermediate attention matrix for the gradient computation. This also allows for operation fusion allowing the calculation of output attention matrix in one kernel.</p>
+<p>They further prove that <code>FlashAttention</code> requires <span class="math inline">\(O(N^2d^2M^{-1})\)</span> HBM accesses where <span class="math inline">\(d\)</span> is the head dimension and <span class="math inline">\(M\)</span> is the size of SRAM, as compared to <span class="math inline">\(\Omega(Nd + N^2)\)</span> of standard attention.</p>
+<section id="standard-attention" class="level2">
+<h2 class="anchored" data-anchor-id="standard-attention">Standard Attention</h2>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Softmax Formula
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>Given input sequences <span class="math inline">\(\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{N \times d}\)</span></p>
+<p><span class="math display">\[\begin{align}
+\mathbf{S} &amp;= \mathbf{Q}\mathbf{K}^{T} &amp;&amp;\in \mathbb{R}^{N \times N} \\
+\mathbf{P} &amp;= \text{softmax}(\mathbf{S}) &amp;&amp;\in \mathbb{R}^{N \times N} \\
+\mathbf{O} &amp;= \mathbf{P}\mathbf{V} &amp;&amp;\in \mathbb{R}^{N \times d}
+\end{align}\]</span></p>
+<p>where,<br>
+<span class="math inline">\(N\)</span> is the sequence length<br>
+<span class="math inline">\(d\)</span> is the head dimension</p>
+<p>Often, <span class="math inline">\(N \gg d\)</span> (e.g., for GPT2, <span class="math inline">\(N = 1024\)</span> and <span class="math inline">\(d = 64\)</span>).</p>
+</div>
+</div>
+</div>
+<p>The standard attention algorithm (given below) materializes the matrices <span class="math inline">\(S\)</span> and <span class="math inline">\(P\)</span> to the HBM which takes <span class="math inline">\(O(N^2)\)</span> memory. As some or most of the operations are memory-bound, the large number of memory accesses translate to slow wall-clock time.</p>
+<section id="standard-attention-algorithm" class="level3">
+<h3 class="anchored" data-anchor-id="standard-attention-algorithm">Standard Attention Algorithm</h3>
+<p><strong>Require:</strong> Matrices <span class="math inline">\(\mathbf{Q},\mathbf{K},\mathbf{V} \in \mathbb{R}^{N \times d}\)</span> in HBM.</p>
+<ol type="1">
+<li>Load <span class="math inline">\(\mathbf{Q}, \mathbf{K}\)</span> by blocks from HBM, compute <span class="math inline">\(\mathbf{S}\)</span> and write it to HBM.</li>
+<li>Read <span class="math inline">\(\mathbf{S}\)</span> from HBM, compute <span class="math inline">\(P\)</span> and write it to HBM.</li>
+<li>Load <span class="math inline">\(\mathbf{P}, \mathbf{V}\)</span> by blocks from HBM, compute <span class="math inline">\(\mathbf{O}\)</span> and write to HBM.</li>
+<li>Return <span class="math inline">\(\mathbf{O}\)</span>.</li>
+</ol>
+</section>
+</section>
+<section id="flashattention" class="level2">
+<h2 class="anchored" data-anchor-id="flashattention">FlashAttention</h2>
+<p>To achieve the goal of computing attention with significantly reduced HBM access, the authors use tiling and re-computation.</p>
+<blockquote class="blockquote">
+<p>The main idea is that we split the inputs <span class="math inline">\(\mathbf{Q}, \mathbf{K}, \mathbf{V}\)</span> into blocks, load them from slow HBM to fast SRAM, then compute the attention output with respect to those blocks. By scaling the output of each block by the right normalization factor before adding them up, we get the correct result at the end.</p>
+</blockquote>
+<section id="tiling-for-attention-outputs-with-respect-to-blocks" class="level3">
+<h3 class="anchored" data-anchor-id="tiling-for-attention-outputs-with-respect-to-blocks">Tiling for attention outputs with respect to blocks</h3>
+<p>This is achieved using a reduction outlined by <a href="http://arxiv.org/abs/1805.02867">Milakov and Gimelshein</a> which they call the online normalizer calculation for softmax.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Calculating normalizer statistics within a block
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-2" class="callout-2-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>For vector <span class="math inline">\(x^{(k)} \in \mathbb{R}^B\)</span>, <span class="math inline">\(B\)</span> being the size of the block and <span class="math inline">\(k\)</span> denoting that <span class="math inline">\(x^{(k)}\)</span> <span class="math inline">\(k_{\text{th}}\)</span> block of some vector <span class="math inline">\(x\)</span> of size <span class="math inline">\(\gg B\)</span></p>
+<p><span class="math display">\[\begin{align}
+m(x^{(k)}) &amp; := \underset{i}{\text{max }} x^{(k)}_i \\
+f(x^{(k)}) &amp; := [e^{x^{(k)}_1 - m(x^{(k)})} ... e^{x^{(k)}_B - m(x^{(k)})}] \\
+\ell(x^{(k)}) &amp; := \underset{i}{\sum} f(x^{(k)})_i
+\end{align}\]</span></p>
+</div>
+</div>
+</div>
+<p>The block-wise calculations can be used to calculate the softmax of the full matrix using the normalization statistics <span class="math inline">\((m(x), l(x))\)</span>.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Online softmax using normalizers
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-3" class="callout-3-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>For vectors <span class="math inline">\(x^{(1)}, x^{(2)} \in \mathbb{R}^B\)</span>, the softmax of the concatenated <span class="math inline">\(x = [x^{(1)}  x^{(2)}] \in \mathbb{R}^{2B}\)</span> as:</p>
+<p><span class="math display">\[\begin{align}
+m(x) &amp;= m([x^{(1)} x^{(2)}])&amp;&amp; = \text{max}(m(x^{(1)}), m(x^{(2)})) \\
+\ell(x) &amp;= \ell([x^{(1)} x^{(2)}])&amp;&amp; = e^{m(x^{(1)}) - m(x)}\ell(x^{(1)}) e^{m(x^{(2)}) - m(x)}\ell(x^{(2)})
+\end{align}\]</span></p>
+<p>Using <span class="math inline">\(m(x)\)</span> and <span class="math inline">\(\ell(x)\)</span>, <span class="math inline">\(f(x)\)</span> and <span class="math inline">\(\text{softmax}(x)\)</span> can be calculated as:</p>
+<p><span class="math display">\[\begin{align}
+f(x) &amp;= [e^{m(x^{(1)}) - m(x)}f(x^{(1)}) e^{m(x^{(2)}) - m(x)}f(x^{(2)})] \\
+\text{softmax}(x) &amp;= \frac{f(x)}{\ell(x)}
+\end{align}\]</span></p>
+</div>
+</div>
+</div>
+<p>The following is a small hand-worked example: <img src="images/blockwise_softmax.jpeg" title="Fig 1: Hand-worked example of block-wise softmax calculation using the online normalizers." class="img-fluid" alt="Blockwise Softmax"></p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Kernel / Operation Fusion
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Tiling enables the implementation of all computation steps in one kernel without multiple HBM access for reads and writes, i.e., it enables us to load input from HBM, perform computation (matrix multiply, softmax, optionally masking and dropout, matrix multiply), then write result back to HBM in one kernel.</p>
+</div>
+</div>
+</section>
+<section id="re-computation-of-s-and-p-for-backward-pass" class="level3">
+<h3 class="anchored" data-anchor-id="re-computation-of-s-and-p-for-backward-pass">Re-computation of S and P for backward pass</h3>
+<p>While the tiling trick enables speed-ups for inference, i.e.&nbsp;during the forward pass through the transformer, the backward pass typically relies on the intermediate matrices <span class="math inline">\(S,P \in \mathbb{R}^{N \times N}\)</span> for the gradient computation with respect to <span class="math inline">\(Q, K, V\)</span>.</p>
+<p>To avoid storing the <span class="math inline">\(O(N^2)\)</span> intermediate values for the backward pass, the authors instead store the softmax normalization statistics <span class="math inline">\((m, l)\)</span> and <em>re-compute</em> <span class="math inline">\(S, P\)</span> in the SRAM during the backward pass.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Important
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The authors are <strong>increasing</strong> FLOPs in order to re-compute <span class="math inline">\(S\)</span> and <span class="math inline">\(P\)</span> fully in the SRAM. To realize these gains, it is important that the SRAM is able accommodate all the required components for gradient calculation. There are implications that emerge from the IO complexity, which are <a href="#implications-of-the-io-complexity">discussed below</a>.</p>
+</div>
+</div>
+</section>
+<section id="flashattention-algorithm" class="level3">
+<h3 class="anchored" data-anchor-id="flashattention-algorithm">FlashAttention Algorithm</h3>
+<p>The authors prove that this algorithm returns <span class="math inline">\(\mathbf{O} = \text{softmax}(\mathbf{Q}\mathbf{K}^T\mathbf{V})\)</span> with <span class="math inline">\(𝑂(𝑁^2d)\)</span> FLOPs and requires <span class="math inline">\(𝑂(𝑁)\)</span> additional memory beyond inputs and output to store <span class="math inline">\(m\)</span> and <span class="math inline">\(\ell\)</span>.</p>
+<p><strong>Require:</strong> Matrices <span class="math inline">\(\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{N \times d}\)</span> in HBM, on-chip SRAM of size <span class="math inline">\(M\)</span>.</p>
+<ol type="1">
+<li>Set block sizes <span class="math inline">\(B_c = \lceil \frac{M}{4d} \rceil\)</span>, <span class="math inline">\(B_r = \min(\lceil \frac{M}{4d} \rceil, d)\)</span>.</li>
+<li>Initialize <span class="math inline">\(\mathbf{O} = (0)_{N \times d} \in \mathbb{R}^{N \times d}\)</span>, <span class="math inline">\(\ell = (0)_{N} \in \mathbb{R}^{N}\)</span>, <span class="math inline">\({m} = (-\infty)_{N} \in \mathbb{R}^{N}\)</span> in HBM.</li>
+<li>Divide <span class="math inline">\(\mathbf{Q}\)</span> into <span class="math inline">\(T_r = \lceil \frac{N}{B_r} \rceil\)</span> blocks <span class="math inline">\(\mathbf{Q}_1, \dots, \mathbf{Q}_{T_r}\)</span>, of size <span class="math inline">\(B_r \times d\)</span> each, and divide <span class="math inline">\(\mathbf{K}, \mathbf{V}\)</span> into <span class="math inline">\(T_c = \lceil \frac{N}{B_c} \rceil\)</span> blocks <span class="math inline">\(\mathbf{K}_1, \dots, \mathbf{K}_{T_c}\)</span> and <span class="math inline">\(\mathbf{V}_1, \dots, \mathbf{V}_{T_c}\)</span>, of size <span class="math inline">\(B_c \times d\)</span> each.</li>
+<li>Divide <span class="math inline">\(\mathbf{O}\)</span> into <span class="math inline">\(T_r\)</span> blocks <span class="math inline">\(\mathbf{O}_1, \dots, \mathbf{O}_{T_r}\)</span>, of size <span class="math inline">\(B_r \times d\)</span> each, divide <span class="math inline">\(\ell\)</span> into <span class="math inline">\(T_r\)</span> blocks <span class="math inline">\(\ell_1, \dots, \ell_{T_r}\)</span>, of size <span class="math inline">\(B_r\)</span> each, divide <span class="math inline">\(m\)</span> into <span class="math inline">\(T_r\)</span> blocks <span class="math inline">\(m_1, \dots, m_{T_r}\)</span>, of size <span class="math inline">\(B_r\)</span> each.</li>
+<li><strong>for</strong> <span class="math inline">\(1 \le j \le T_c\)</span> <strong>do</strong></li>
+<li><span class="math inline">\(\quad\)</span> Load <span class="math inline">\(\mathbf{K}_j, \mathbf{V}_j\)</span> from HBM to on-chip SRAM.</li>
+<li><span class="math inline">\(\quad\)</span> <strong>for</strong> <span class="math inline">\(1 \le i \le T_r\)</span> <strong>do</strong></li>
+<li><span class="math inline">\(\qquad\)</span> Load <span class="math inline">\(\mathbf{Q}_i, \mathbf{O}_i, \ell_i, m_i\)</span> from HBM to on-chip SRAM.</li>
+<li><span class="math inline">\(\qquad\)</span> On chip, compute <span class="math inline">\(\mathbf{S}_{ij} = \mathbf{Q}_i \mathbf{K}_j^T \in \mathbb{R}^{B_r \times B_c}\)</span>.</li>
+<li><span class="math inline">\(\qquad\)</span> On chip, compute <span class="math inline">\(\tilde{m}_{ij} = \text{rowmax}(\mathbf{S}_{ij}) \in \mathbb{R}^{B_r}\)</span>, <span class="math inline">\(\mathbf{\tilde{P}}_{ij} = \exp(\mathbf{S}_{ij} - \tilde{m}_{ij}) \in \mathbb{R}^{B_r \times B_c}\)</span> (pointwise), <span class="math inline">\(\mathbf{\tilde{\ell}}_{ij} = \text{rowsum}(\mathbf{\tilde{P}}_{ij}) \in \mathbb{R}^{B_r}\)</span>.</li>
+<li><span class="math inline">\(\qquad\)</span> On chip, compute <span class="math inline">\(m_i^{\text{new}} = \max(m_i, \tilde{m}_{ij}) \in \mathbb{R}^{B_r}\)</span>, <span class="math inline">\(\ell_i^{\text{new}} = e^{m_i - m_i^{\text{new}}} \ell_i + e^{\tilde{m}_{ij} - m_i^{\text{new}}} \mathbf{\tilde{\ell}}_{ij} \in \mathbb{R}^{B_r}\)</span>.</li>
+<li><span class="math inline">\(\qquad\)</span> Write <span class="math inline">\(\mathbf{O}_i \leftarrow \text{diag}(\ell_i^{\text{new}})^{-1} (\text{diag}(\ell_i) e^{m_i - m_i^{\text{new}}} \mathbf{O}_i + e^{\tilde{m}_{ij} - m_i^{\text{new}}} \mathbf{\tilde{P}}_{ij} \mathbf{V}_j)\)</span> to HBM.</li>
+<li><span class="math inline">\(\qquad\)</span> Write <span class="math inline">\(\ell_i \leftarrow \ell_i^{\text{new}}\)</span>, <span class="math inline">\(m_i \leftarrow m_i^{\text{new}}\)</span> to HBM.</li>
+<li><span class="math inline">\(\quad\)</span> <strong>end for</strong></li>
+<li><strong>end for</strong></li>
+<li>Return <span class="math inline">\(\mathbf{O}\)</span>.</li>
+</ol>
+</section>
+<section id="implications-of-the-io-complexity" class="level3">
+<h3 class="anchored" data-anchor-id="implications-of-the-io-complexity">Implications of the IO Complexity<a name="implications-of-the-io-complexity"></a></h3>
+<p>In the paper, the authors show the effect of the forward runtime of <code>FlashAttention</code> using the settings on an A100 GPU</p>
+<ul>
+<li>sequence length, <span class="math inline">\(N = 1024\)</span></li>
+<li>head dimensions, <span class="math inline">\(d = 64\)</span></li>
+<li>num_heads <span class="math inline">\(= 16\)</span></li>
+<li>batch_size <span class="math inline">\(= 64\)</span></li>
+</ul>
+<p>From the graph, it is visible that:</p>
+<ol type="1">
+<li>Increasing the block size decreases the HBM accesses.</li>
+<li>Fewer HBM accesses result in faster runtime, up to a point - this is most likely because at higher block sizes the bottlenecks shift from memory bandwidth (to arithmetic operations in the ideal case, or, in the worst case, resource constraints).</li>
+</ol>
+<p>It is useful to consider the implications using commonly used GPUs.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: center;">GPU</th>
+<th style="text-align: center;">Arch</th>
+<th style="text-align: right;">SMs</th>
+<th style="text-align: right;">L1 size / SM</th>
+<th style="text-align: right;">L2 size</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf">T4</a></td>
+<td style="text-align: center;">Turing TU104</td>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">96KB</td>
+<td style="text-align: right;">4MB</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">A10g</a></td>
+<td style="text-align: center;">Ampere GA102</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">128KB</td>
+<td style="text-align: right;">6MB</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">A100</a></td>
+<td style="text-align: center;">Ampere A100</td>
+<td style="text-align: right;">108</td>
+<td style="text-align: right;">164KB</td>
+<td style="text-align: right;">40MB</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">H100</a></td>
+<td style="text-align: center;">Hopper H100</td>
+<td style="text-align: right;">114</td>
+<td style="text-align: right;">228KB</td>
+<td style="text-align: right;">50MB</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>While L1 as well as L2 caches can be considered on-chip SRAMs, we should go by the L1 size for deciding block sizes based on how <a href="https://modal.com/gpu-glossary/device-software/thread-hierarchy">blocks and SMs interact</a> and how <a href="https://modal.com/gpu-glossary/perf/bank-conflict">resource sharing affects</a> <a href="https://modal.com/gpu-glossary/perf/occupancy">occupancy</a>.</p>
+</div>
+</div>
+<p>Just by looking at these numbers, there a few things that we can expect about performance gains:</p>
+<ol type="1">
+<li>During Inference: On a GPU like T4, even small models like llama3.2-3B that can fit within its VRAM will see only marginal gains at full sequence length (if any) because the block size will have to be very small. Any real improvements would need exploit additional characteristics like sparsity.</li>
+<li>During Training: On T4, there is likely no performance gain to be expected when dealing with realistic sequence lengths. The A10 might be only a slightly better budget candidate to T4 even at twice the cost per GPU, but any real training would need something like an A100 or H100.</li>
+</ol>
+</section>
+</section>
+</section>
+<section id="references" class="level1">
+<h1>References</h1>
+<ul>
+<li><a href="https://arxiv.org/abs/2205.14135">Dao, Tri, Daniel Y. Fu, Stefano Ermon, Atri Rudra, and Christopher Ré. “FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness.” Preprint, submitted May 2022. arXiv:2205.14135. https://arxiv.org/abs/2205.14135.</a></li>
+<li><a href="https://arxiv.org/abs/2007.00072.">Ivanov, Andrei, Nikoli Dryden, Tal Ben-Nun, Shigang Li, and Torsten Hoefler. “Data Movement Is All You Need: A Case Study on Optimizing Transformers.” Preprint, submitted July 2020. arXiv:2007.00072. https://arxiv.org/abs/2007.00072.</a></li>
+<li><a href="https://modal.com/gpu-glossary">Modal, GPU Glossary</a></li>
+<li><a href="https://www.oreilly.com/library/view/programming-massively-parallel/9780323984638/">Hwu, Wen-mei, and David Kirk. Programming Massively Parallel Processors: A Hands-on Approach. 4th ed.&nbsp;Waltham, MA: Morgan Kaufmann, 2023.</a></li>
+<li><a href="http://arxiv.org/abs/1805.02867">Milakov, Maxim, and Natalia Gimelshein. “Online Normalizer Calculation for Softmax.” Preprint, submitted May 2018. arXiv:1805.02867. http://arxiv.org/abs/1805.02867.</a></li>
+<li>NVIDIA GPU white-papers (<a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/">Turing T4</a>, <a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">Ampere A10x</a>, <a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">Ampere A100</a>, <a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">Hopper H100</a>)</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/ganeshscribbles\.online");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://ganeshscribbles.online/index.html</loc>
-    <lastmod>2024-05-05T23:10:11.134Z</lastmod>
+    <loc>https://ganeshscribbles.online/about.html</loc>
+    <lastmod>2025-11-14T06:20:02.042Z</lastmod>
   </url>
   <url>
-    <loc>https://ganeshscribbles.online/about.html</loc>
-    <lastmod>2024-05-05T23:10:11.134Z</lastmod>
+    <loc>https://ganeshscribbles.online/posts/flash-attention/2025-11-13-notes-on-flash-attention.html</loc>
+    <lastmod>2025-11-14T06:20:02.042Z</lastmod>
+  </url>
+  <url>
+    <loc>https://ganeshscribbles.online/index.html</loc>
+    <lastmod>2025-11-14T06:20:02.042Z</lastmod>
   </url>
   <url>
     <loc>https://ganeshscribbles.online/posts/mlflow-logging/2022-09-12-mlflow-logging-design-decisions-tricky-parts.html</loc>
-    <lastmod>2024-05-05T23:10:11.138Z</lastmod>
+    <lastmod>2025-11-14T06:20:02.047Z</lastmod>
   </url>
 </urlset>

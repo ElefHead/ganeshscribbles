@@ -6,8 +6,8 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2025-11-13">
-<meta name="description" content="My notes as I go through the FlashAttention papers and the various implementations.">
+<meta name="dcterms.date" content="2025-11-14">
+<meta name="description" content="Understanding the FlashAttention papers and the various implementations.">
 
 <title>Notes on FlashAttention – ganeshscribbles</title>
 <style>
@@ -149,7 +149,7 @@ window.Quarto = {
       <h1 class="title">Notes on FlashAttention</h1>
                   <div>
         <div class="description">
-          My notes as I go through the FlashAttention papers and the various implementations.
+          Understanding the FlashAttention papers and the various implementations.
         </div>
       </div>
                           <div class="quarto-categories">
@@ -167,7 +167,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">November 13, 2025</p>
+        <p class="date">November 14, 2025</p>
       </div>
     </div>
     
@@ -271,7 +271,7 @@ They note that</p>
 </blockquote>
 <section id="tiling-for-attention-outputs-with-respect-to-blocks" class="level3">
 <h3 class="anchored" data-anchor-id="tiling-for-attention-outputs-with-respect-to-blocks">Tiling for attention outputs with respect to blocks</h3>
-<p>This is achieved using a reduction outlined by <a href="http://arxiv.org/abs/1805.02867">Milakov and Gimelshein</a> which they call the online normalizer calculation for softmax.</p>
+<p>This is achieved by applying tiling to the online softmax reduction outlined by <a href="http://arxiv.org/abs/1805.02867">Milakov and Gimelshein</a>.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="true" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -319,7 +319,7 @@ f(x) &amp;= [e^{m(x^{(1)}) - m(x)}f(x^{(1)}) e^{m(x^{(2)}) - m(x)}f(x^{(2)})] \\
 </div>
 </div>
 </div>
-<p>The following is a small hand-worked example: <img src="images/blockwise_softmax.jpeg" title="Fig 1: Hand-worked example of block-wise softmax calculation using the online normalizers." class="img-fluid" alt="Blockwise Softmax"></p>
+<p>The following is a small hand-worked example: <img src="images/blockwise_softmax.png" title="Fig 1: Hand-worked example of block-wise softmax calculation using the online normalizers." class="img-fluid" alt="Blockwise Softmax"></p>
 <div class="callout callout-style-default callout-important callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -393,41 +393,46 @@ Important
 <table class="caption-top table">
 <thead>
 <tr class="header">
-<th style="text-align: center;">GPU</th>
+<th style="text-align: left;">GPU</th>
 <th style="text-align: center;">Arch</th>
-<th style="text-align: right;">SMs</th>
+<th style="text-align: center;">SMs</th>
 <th style="text-align: right;">L1 size / SM</th>
 <th style="text-align: right;">L2 size</th>
+<th style="text-align: right;">Memory Bandwidth</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: center;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf">T4</a></td>
+<td style="text-align: left;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf">T4</a></td>
 <td style="text-align: center;">Turing TU104</td>
-<td style="text-align: right;">46</td>
+<td style="text-align: center;">46</td>
 <td style="text-align: right;">96KB</td>
 <td style="text-align: right;">4MB</td>
+<td style="text-align: right;">616 GB/sec</td>
 </tr>
 <tr class="even">
-<td style="text-align: center;"><a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">A10g</a></td>
+<td style="text-align: left;"><a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">A10g</a></td>
 <td style="text-align: center;">Ampere GA102</td>
-<td style="text-align: right;">84</td>
+<td style="text-align: center;">84</td>
 <td style="text-align: right;">128KB</td>
 <td style="text-align: right;">6MB</td>
+<td style="text-align: right;">760 GB/sec</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">A100</a></td>
+<td style="text-align: left;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">A100</a></td>
 <td style="text-align: center;">Ampere A100</td>
-<td style="text-align: right;">108</td>
+<td style="text-align: center;">108</td>
 <td style="text-align: right;">164KB</td>
 <td style="text-align: right;">40MB</td>
+<td style="text-align: right;">1555 GB/sec</td>
 </tr>
 <tr class="even">
-<td style="text-align: center;"><a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">H100</a></td>
+<td style="text-align: left;"><a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">H100</a></td>
 <td style="text-align: center;">Hopper H100</td>
-<td style="text-align: right;">114</td>
+<td style="text-align: center;">114</td>
 <td style="text-align: right;">228KB</td>
 <td style="text-align: right;">50MB</td>
+<td style="text-align: right;">2039 GB/sec</td>
 </tr>
 </tbody>
 </table>
@@ -441,13 +446,14 @@ Note
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>While L1 as well as L2 caches can be considered on-chip SRAMs, we should go by the L1 size for deciding block sizes based on how <a href="https://modal.com/gpu-glossary/device-software/thread-hierarchy">blocks and SMs interact</a> and how <a href="https://modal.com/gpu-glossary/perf/bank-conflict">resource sharing affects</a> <a href="https://modal.com/gpu-glossary/perf/occupancy">occupancy</a>.</p>
+<p>While L1 as well as L2 caches can be considered on-chip SRAMs, we should go by the L1 (shared memory) size for deciding block sizes based on how <a href="https://modal.com/gpu-glossary/device-software/thread-hierarchy">blocks and SMs interact</a> and how <a href="https://modal.com/gpu-glossary/perf/bank-conflict">resource sharing affects</a> <a href="https://modal.com/gpu-glossary/perf/occupancy">occupancy</a>.</p>
 </div>
 </div>
 <p>Just by looking at these numbers, there a few things that we can expect about performance gains:</p>
 <ol type="1">
 <li>During Inference: On a GPU like T4, even small models like llama3.2-3B that can fit within its VRAM will see only marginal gains at full sequence length (if any) because the block size will have to be very small. Any real improvements would need exploit additional characteristics like sparsity.</li>
 <li>During Training: On T4, there is likely no performance gain to be expected when dealing with realistic sequence lengths. The A10 might be only a slightly better budget candidate to T4 even at twice the cost per GPU, but any real training would need something like an A100 or H100.</li>
+<li>On the other hand, very small models / small models in small sequence settings, if run on GPUs like A/H100 using all of the available resource, might not be memory bound in which case <code>FlashAttention</code> might add additional computation steps.</li>
 </ol>
 </section>
 </section>

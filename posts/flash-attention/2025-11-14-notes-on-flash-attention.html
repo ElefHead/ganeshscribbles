@@ -154,7 +154,7 @@ window.Quarto = {
       </div>
                           <div class="quarto-categories">
                 <div class="quarto-category">inference</div>
-                <div class="quarto-category">mlsys</div>
+                <div class="quarto-category">attention</div>
                 <div class="quarto-category">performance</div>
               </div>
                   </div>
@@ -171,6 +171,12 @@ window.Quarto = {
       </div>
     </div>
     
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">November 14, 2025</p>
+      </div>
+    </div>
       
     </div>
     
@@ -336,8 +342,8 @@ f(x) &amp;= [e^{m(x^{(1)}) - m(x)}f(x^{(1)}) e^{m(x^{(2)}) - m(x)}f(x^{(2)})] \\
 </section>
 <section id="re-computation-of-s-and-p-for-backward-pass" class="level3">
 <h3 class="anchored" data-anchor-id="re-computation-of-s-and-p-for-backward-pass">Re-computation of S and P for backward pass</h3>
-<p>While the tiling trick enables speed-ups for inference, i.e.&nbsp;during the forward pass through the transformer, the backward pass typically relies on the intermediate matrices <span class="math inline">\(S,P \in \mathbb{R}^{N \times N}\)</span> for the gradient computation with respect to <span class="math inline">\(Q, K, V\)</span>.</p>
-<p>To avoid storing the <span class="math inline">\(O(N^2)\)</span> intermediate values for the backward pass, the authors instead store the softmax normalization statistics <span class="math inline">\((m, l)\)</span> and <em>re-compute</em> <span class="math inline">\(S, P\)</span> in the SRAM during the backward pass.</p>
+<p>While the tiling trick enables speed-ups for inference, i.e.&nbsp;during the forward pass through the transformer, the backward pass typically relies on the intermediate matrices <span class="math inline">\(S,P \in \mathbb{R}^{N \times N}\)</span> for the gradient computation with respect to <span class="math inline">\(\mathbf{Q}, \mathbf{K}, \mathbf{V}\)</span>.</p>
+<p>To avoid storing the <span class="math inline">\(O(N^2)\)</span> intermediate values for the backward pass, the authors instead store the softmax normalization statistics <span class="math inline">\((m, \ell)\)</span> and <em>re-compute</em> <span class="math inline">\(\mathbf{S}, \mathbf{P}\)</span> in the SRAM during the backward pass.</p>
 <div class="callout callout-style-default callout-important callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -348,7 +354,7 @@ Important
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>The authors are <strong>increasing</strong> FLOPs in order to re-compute <span class="math inline">\(S\)</span> and <span class="math inline">\(P\)</span> fully in the SRAM. To realize these gains, it is important that the SRAM is able accommodate all the required components for gradient calculation. There are implications that emerge from the IO complexity, which are <a href="#implications-of-the-io-complexity">discussed below</a>.</p>
+<p>The authors are <strong>increasing</strong> FLOPs in order to re-compute <span class="math inline">\(\mathbf{S}\)</span> and <span class="math inline">\(\mathbf{P}\)</span> fully in the SRAM. To realize these gains, it is important that the SRAM is able accommodate all the required components for gradient calculation. There are implications that emerge from the IO complexity, which are <a href="#implications-of-the-io-complexity">discussed below</a>.</p>
 </div>
 </div>
 </section>

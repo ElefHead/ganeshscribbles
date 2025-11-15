@@ -245,11 +245,13 @@ They note that</p>
 <div id="callout-1" class="callout-1-contents callout-collapse collapse show">
 <div class="callout-body-container callout-body">
 <p>Given input sequences <span class="math inline">\(\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{N \times d}\)</span></p>
-<p><span class="math display">\[\begin{align}
+<p><span class="math display">\[
+\begin{align}
 \mathbf{S} &amp;= \mathbf{Q}\mathbf{K}^{T} &amp;&amp;\in \mathbb{R}^{N \times N} \\
 \mathbf{P} &amp;= \text{softmax}(\mathbf{S}) &amp;&amp;\in \mathbb{R}^{N \times N} \\
 \mathbf{O} &amp;= \mathbf{P}\mathbf{V} &amp;&amp;\in \mathbb{R}^{N \times d}
-\end{align}\]</span></p>
+\end{align}
+\]</span></p>
 <p>where,<br>
 <span class="math inline">\(N\)</span> is the sequence length<br>
 <span class="math inline">\(d\)</span> is the head dimension</p>
@@ -291,11 +293,13 @@ They note that</p>
 <div id="callout-2" class="callout-2-contents callout-collapse collapse show">
 <div class="callout-body-container callout-body">
 <p>For vector <span class="math inline">\(x^{(k)} \in \mathbb{R}^B\)</span>, <span class="math inline">\(B\)</span> being the size of the block and <span class="math inline">\(k\)</span> denoting that <span class="math inline">\(x^{(k)}\)</span> <span class="math inline">\(k_{\text{th}}\)</span> block of some vector <span class="math inline">\(x\)</span> of size <span class="math inline">\(\gg B\)</span></p>
-<p><span class="math display">\[\begin{align}
+<p><span class="math display">\[
+\begin{align}
 m(x^{(k)}) &amp; := \underset{i}{\text{max }} x^{(k)}_i \\
 f(x^{(k)}) &amp; := [e^{x^{(k)}_1 - m(x^{(k)})} ... e^{x^{(k)}_B - m(x^{(k)})}] \\
 \ell(x^{(k)}) &amp; := \underset{i}{\sum} f(x^{(k)})_i
-\end{align}\]</span></p>
+\end{align}
+\]</span></p>
 </div>
 </div>
 </div>
@@ -313,19 +317,29 @@ f(x^{(k)}) &amp; := [e^{x^{(k)}_1 - m(x^{(k)})} ... e^{x^{(k)}_B - m(x^{(k)})}] 
 <div id="callout-3" class="callout-3-contents callout-collapse collapse show">
 <div class="callout-body-container callout-body">
 <p>For vectors <span class="math inline">\(x^{(1)}, x^{(2)} \in \mathbb{R}^B\)</span>, the softmax of the concatenated <span class="math inline">\(x = [x^{(1)}  x^{(2)}] \in \mathbb{R}^{2B}\)</span> as:</p>
-<p><span class="math display">\[\begin{align}
+<p><span class="math display">\[
+\begin{align}
 m(x) &amp;= m([x^{(1)} x^{(2)}]) &amp;&amp;= \text{max}(m(x^{(1)}), m(x^{(2)})) \\
 \ell(x) &amp;= \ell([x^{(1)} x^{(2)}]) &amp;&amp;= e^{m(x^{(1)}) - m(x)}\ell(x^{(1)}) e^{m(x^{(2)}) - m(x)}\ell(x^{(2)})
-\end{align}\]</span></p>
+\end{align}
+\]</span></p>
 <p>Using <span class="math inline">\(m(x)\)</span> and <span class="math inline">\(\ell(x)\)</span>, <span class="math inline">\(f(x)\)</span> and <span class="math inline">\(\text{softmax}(x)\)</span> can be calculated as:</p>
-<p><span class="math display">\[\begin{align}
+<p><span class="math display">\[
+\begin{align}
 f(x) &amp;= [e^{m(x^{(1)}) - m(x)}f(x^{(1)}) e^{m(x^{(2)}) - m(x)}f(x^{(2)})] \\
 \text{softmax}(x) &amp;= \frac{f(x)}{\ell(x)}
-\end{align}\]</span></p>
+\end{align}
+\]</span></p>
 </div>
 </div>
 </div>
-<p>The following is a small hand-worked example: <img src="images/blockwise_softmax.png" title="Fig 1: Hand-worked example of block-wise softmax calculation using the online normalizers." class="img-fluid" alt="Blockwise Softmax"></p>
+<p>The following is a small hand-worked example:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/blockwise_softmax.png" title="Fig 1: Hand-worked example of block-wise softmax calculation using the online normalizers." class="img-fluid figure-img"></p>
+<figcaption>Blockwise Softmax</figcaption>
+</figure>
+</div>
 <div class="callout callout-style-default callout-important callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -394,18 +408,25 @@ Important
 <div class="callout-body-container callout-body">
 <p><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">An A100</a> has a configurable 164KB SRAM per <a href="https://modal.com/gpu-glossary/device-hardware/streaming-multiprocessor">SM</a>.</p>
 <p>Assuming the availability of 128KB and using <code>fp16</code>/<code>bf16</code> (2 bytes to represent a number) for all our computations,<br>
-we can calculate <span class="math inline">\(M\)</span> first: <span class="math display">\[\begin{align}
+we can calculate <span class="math inline">\(M\)</span> first: <span class="math display">\[
+\begin{align}
 M &amp;= \frac{\text{Total Available Bytes}}{\text{ Bytes to represent a number}}&amp;&amp;= \frac{128 \times 1024}{2} &amp;&amp;= 65536
-\end{align}\]</span></p>
-<p>With <span class="math inline">\(M\)</span>, we can calculate <span class="math inline">\(B_c\)</span> and <span class="math inline">\(B_r\)</span>: <span class="math display">\[\begin{align}
+\end{align}
+\]</span></p>
+<p>With <span class="math inline">\(M\)</span>, we can calculate <span class="math inline">\(B_c\)</span> and <span class="math inline">\(B_r\)</span>:</p>
+<p><span class="math display">\[
+\begin{align}
 B_c &amp;= \lceil \frac{M}{4 \times d} \rceil &amp;&amp;= \lceil \frac{65536}{4 \times 64} \rceil &amp;&amp;= 256 \\
 B_r &amp;= \min(\lceil \frac{M}{4 \times d} \rceil, d) &amp;&amp;= \min(\lceil \frac{65536}{4 \times 64} \rceil, 64) &amp;&amp;= 64
-\end{align}\]</span></p>
+\end{align}
+\]</span></p>
 <p>Assuming <span class="math inline">\(N = 1024\)</span> (used in the paper), we can calculate tile sizes as:<br>
-<span class="math display">\[\begin{align}
+<span class="math display">\[
+\begin{align}
 T_r &amp;= \lceil \frac{N}{B_r} \rceil &amp;&amp;= 1024 / 64&amp;&amp;= 16 \\
 T_c &amp;= \lceil \frac{N}{B_c} \rceil &amp;&amp;= 1024 / 256&amp;&amp;= 4
-\end{align}\]</span></p>
+\end{align}
+\]</span></p>
 </div>
 </div>
 </div>
@@ -433,7 +454,7 @@ T_c &amp;= \lceil \frac{N}{B_c} \rceil &amp;&amp;= 1024 / 256&amp;&amp;= 4
 <th style="text-align: left;">GPU</th>
 <th style="text-align: center;">Arch</th>
 <th style="text-align: center;">SMs</th>
-<th style="text-align: right;">SRAM[^]</th>
+<th style="text-align: right;">SRAM<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></th>
 <th style="text-align: right;">VRAM</th>
 <th style="text-align: right;">Memory Bandwidth</th>
 </tr>
@@ -504,7 +525,13 @@ T_c &amp;= \lceil \frac{N}{B_c} \rceil &amp;&amp;= 1024 / 256&amp;&amp;= 4
 
 </section>
 
-</main> <!-- /main -->
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>Modern NVIDIA GPUs have combined <a href="https://modal.com/gpu-glossary/device-hardware/l1-data-cache">L1 data cache</a> and shared memory (SRAM) and the exact memory reserved for both is configurable.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";

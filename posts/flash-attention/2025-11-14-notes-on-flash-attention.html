@@ -174,7 +174,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Modified</div>
       <div class="quarto-title-meta-contents">
-        <p class="date-modified">November 14, 2025</p>
+        <p class="date-modified">November 15, 2025</p>
       </div>
     </div>
       
@@ -199,8 +199,8 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#tiling-for-attention-outputs-with-respect-to-blocks" id="toc-tiling-for-attention-outputs-with-respect-to-blocks" class="nav-link" data-scroll-target="#tiling-for-attention-outputs-with-respect-to-blocks">Tiling for attention outputs with respect to blocks</a></li>
   <li><a href="#re-computation-of-s-and-p-for-backward-pass" id="toc-re-computation-of-s-and-p-for-backward-pass" class="nav-link" data-scroll-target="#re-computation-of-s-and-p-for-backward-pass">Re-computation of S and P for backward pass</a></li>
-  <li><a href="#flashattention-algorithm" id="toc-flashattention-algorithm" class="nav-link" data-scroll-target="#flashattention-algorithm">FlashAttention Algorithm</a></li>
-  <li><a href="#implications-of-the-io-complexity" id="toc-implications-of-the-io-complexity" class="nav-link" data-scroll-target="#implications-of-the-io-complexity">Implications of the IO Complexity</a><a name="implications-of-the-io-complexity" class="nav-link" data-scroll-target="undefined"></a></li>
+  <li><a href="#flashattention-algorithm-forward" id="toc-flashattention-algorithm-forward" class="nav-link" data-scroll-target="#flashattention-algorithm-forward">FlashAttention Algorithm (Forward)</a></li>
+  <li><a href="#increased-flops-to-overcome-io-bottlenecks" id="toc-increased-flops-to-overcome-io-bottlenecks" class="nav-link" data-scroll-target="#increased-flops-to-overcome-io-bottlenecks">Increased FLOPs to Overcome IO Bottlenecks</a></li>
   </ul></li>
   </ul></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
@@ -257,7 +257,7 @@ They note that</p>
 </div>
 </div>
 </div>
-<p>The standard attention algorithm (given below) materializes the matrices <span class="math inline">\(S\)</span> and <span class="math inline">\(P\)</span> to the HBM which takes <span class="math inline">\(O(N^2)\)</span> memory. As some or most of the operations are memory-bound, the large number of memory accesses translate to slow wall-clock time.</p>
+<p>The standard attention algorithm (given below) materializes the matrices <span class="math inline">\(\mathbf{S}\)</span> and <span class="math inline">\(\mathbf{P}\)</span> to the HBM which takes <span class="math inline">\(O(N^2)\)</span> memory. As some or most of the operations are memory-bound, the large number of memory accesses translate to slow wall-clock time.</p>
 <section id="standard-attention-algorithm" class="level3">
 <h3 class="anchored" data-anchor-id="standard-attention-algorithm">Standard Attention Algorithm</h3>
 <p><strong>Require:</strong> Matrices <span class="math inline">\(\mathbf{Q},\mathbf{K},\mathbf{V} \in \mathbb{R}^{N \times d}\)</span> in HBM.</p>
@@ -299,7 +299,7 @@ f(x^{(k)}) &amp; := [e^{x^{(k)}_1 - m(x^{(k)})} ... e^{x^{(k)}_B - m(x^{(k)})}] 
 </div>
 </div>
 </div>
-<p>The block-wise calculations can be used to calculate the softmax of the full matrix using the normalization statistics <span class="math inline">\((m(x), l(x))\)</span>.</p>
+<p>The block-wise calculations can be used to calculate the softmax of the full matrix using the normalization statistics <span class="math inline">\((m(x), \ell(x))\)</span>.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="true" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -314,8 +314,8 @@ f(x^{(k)}) &amp; := [e^{x^{(k)}_1 - m(x^{(k)})} ... e^{x^{(k)}_B - m(x^{(k)})}] 
 <div class="callout-body-container callout-body">
 <p>For vectors <span class="math inline">\(x^{(1)}, x^{(2)} \in \mathbb{R}^B\)</span>, the softmax of the concatenated <span class="math inline">\(x = [x^{(1)}  x^{(2)}] \in \mathbb{R}^{2B}\)</span> as:</p>
 <p><span class="math display">\[\begin{align}
-m(x) &amp;= m([x^{(1)} x^{(2)}])&amp;&amp; = \text{max}(m(x^{(1)}), m(x^{(2)})) \\
-\ell(x) &amp;= \ell([x^{(1)} x^{(2)}])&amp;&amp; = e^{m(x^{(1)}) - m(x)}\ell(x^{(1)}) e^{m(x^{(2)}) - m(x)}\ell(x^{(2)})
+m(x) &amp;= m([x^{(1)} x^{(2)}]) &amp;&amp;= \text{max}(m(x^{(1)}), m(x^{(2)})) \\
+\ell(x) &amp;= \ell([x^{(1)} x^{(2)}]) &amp;&amp;= e^{m(x^{(1)}) - m(x)}\ell(x^{(1)}) e^{m(x^{(2)}) - m(x)}\ell(x^{(2)})
 \end{align}\]</span></p>
 <p>Using <span class="math inline">\(m(x)\)</span> and <span class="math inline">\(\ell(x)\)</span>, <span class="math inline">\(f(x)\)</span> and <span class="math inline">\(\text{softmax}(x)\)</span> can be calculated as:</p>
 <p><span class="math display">\[\begin{align}
@@ -354,12 +354,12 @@ Important
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>The authors are <strong>increasing</strong> FLOPs in order to re-compute <span class="math inline">\(\mathbf{S}\)</span> and <span class="math inline">\(\mathbf{P}\)</span> fully in the SRAM. To realize these gains, it is important that the SRAM is able accommodate all the required components for gradient calculation. There are implications that emerge from the IO complexity, which are <a href="#implications-of-the-io-complexity">discussed below</a>.</p>
+<p>The authors are <strong>increasing</strong> FLOPs in order to re-compute <span class="math inline">\(\mathbf{S}\)</span> and <span class="math inline">\(\mathbf{P}\)</span> fully in the SRAM and argue that this trade-off leads to more efficient use of the available hardware leading to an increased overall performance.</p>
 </div>
 </div>
 </section>
-<section id="flashattention-algorithm" class="level3">
-<h3 class="anchored" data-anchor-id="flashattention-algorithm">FlashAttention Algorithm</h3>
+<section id="flashattention-algorithm-forward" class="level3">
+<h3 class="anchored" data-anchor-id="flashattention-algorithm-forward">FlashAttention Algorithm (Forward)</h3>
 <p>The authors prove that this algorithm returns <span class="math inline">\(\mathbf{O} = \text{softmax}(\mathbf{Q}\mathbf{K}^T\mathbf{V})\)</span> with <span class="math inline">\(𝑂(𝑁^2d)\)</span> FLOPs and requires <span class="math inline">\(𝑂(𝑁)\)</span> additional memory beyond inputs and output to store <span class="math inline">\(m\)</span> and <span class="math inline">\(\ell\)</span>.</p>
 <p><strong>Require:</strong> Matrices <span class="math inline">\(\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{N \times d}\)</span> in HBM, on-chip SRAM of size <span class="math inline">\(M\)</span>.</p>
 <ol type="1">
@@ -380,9 +380,39 @@ Important
 <li><strong>end for</strong></li>
 <li>Return <span class="math inline">\(\mathbf{O}\)</span>.</li>
 </ol>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Calculating block and tile sizes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-6" class="callout-6-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">An A100</a> has a configurable 164KB SRAM per <a href="https://modal.com/gpu-glossary/device-hardware/streaming-multiprocessor">SM</a>.</p>
+<p>Assuming the availability of 128KB and using <code>fp16</code>/<code>bf16</code> (2 bytes to represent a number) for all our computations,<br>
+we can calculate <span class="math inline">\(M\)</span> first: <span class="math display">\[\begin{align}
+M &amp;= \frac{\text{Total Available Bytes}}{\text{ Bytes to represent a number}}&amp;&amp;= \frac{128 \times 1024}{2} &amp;&amp;= 65536
+\end{align}\]</span></p>
+<p>With <span class="math inline">\(M\)</span>, we can calculate <span class="math inline">\(B_c\)</span> and <span class="math inline">\(B_r\)</span>: <span class="math display">\[\begin{align}
+B_c &amp;= \lceil \frac{M}{4 \times d} \rceil &amp;&amp;= \lceil \frac{65536}{4 \times 64} \rceil &amp;&amp;= 256 \\
+B_r &amp;= \min(\lceil \frac{M}{4 \times d} \rceil, d) &amp;&amp;= \min(\lceil \frac{65536}{4 \times 64} \rceil, 64) &amp;&amp;= 64
+\end{align}\]</span></p>
+<p>Assuming <span class="math inline">\(N = 1024\)</span> (used in the paper), we can calculate tile sizes as:<br>
+<span class="math display">\[\begin{align}
+T_r &amp;= \lceil \frac{N}{B_r} \rceil &amp;&amp;= 1024 / 64&amp;&amp;= 16 \\
+T_c &amp;= \lceil \frac{N}{B_c} \rceil &amp;&amp;= 1024 / 256&amp;&amp;= 4
+\end{align}\]</span></p>
+</div>
+</div>
+</div>
+<!-- #### Sample hand-worked example -->
 </section>
-<section id="implications-of-the-io-complexity" class="level3">
-<h3 class="anchored" data-anchor-id="implications-of-the-io-complexity">Implications of the IO Complexity<a name="implications-of-the-io-complexity"></a></h3>
+<section id="increased-flops-to-overcome-io-bottlenecks" class="level3">
+<h3 class="anchored" data-anchor-id="increased-flops-to-overcome-io-bottlenecks">Increased FLOPs to Overcome IO Bottlenecks</h3>
 <p>In the paper, the authors show the effect of the forward runtime of <code>FlashAttention</code> using the settings on an A100 GPU</p>
 <ul>
 <li>sequence length, <span class="math inline">\(N = 1024\)</span></li>
@@ -397,13 +427,14 @@ Important
 </ol>
 <p>It is useful to consider the implications using commonly used GPUs.</p>
 <table class="caption-top table">
+<caption>Commonly used NVIDIA GPUs with their SRAM, VRAM, and IO Bandwidth numbers from their white papers.</caption>
 <thead>
 <tr class="header">
 <th style="text-align: left;">GPU</th>
 <th style="text-align: center;">Arch</th>
 <th style="text-align: center;">SMs</th>
-<th style="text-align: right;">L1 size / SM</th>
-<th style="text-align: right;">L2 size</th>
+<th style="text-align: right;">SRAM[^]</th>
+<th style="text-align: right;">VRAM</th>
 <th style="text-align: right;">Memory Bandwidth</th>
 </tr>
 </thead>
@@ -412,53 +443,47 @@ Important
 <td style="text-align: left;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf">T4</a></td>
 <td style="text-align: center;">Turing TU104</td>
 <td style="text-align: center;">46</td>
-<td style="text-align: right;">96KB</td>
-<td style="text-align: right;">4MB</td>
+<td style="text-align: right;">64KB</td>
+<td style="text-align: right;">16 GB</td>
 <td style="text-align: right;">616 GB/sec</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">A10g</a></td>
-<td style="text-align: center;">Ampere GA102</td>
-<td style="text-align: center;">84</td>
-<td style="text-align: right;">128KB</td>
-<td style="text-align: right;">6MB</td>
+<td style="text-align: left;"><a href="https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf">V100</a></td>
+<td style="text-align: center;">Volta GV100</td>
+<td style="text-align: center;">80</td>
+<td style="text-align: right;">96KB</td>
+<td style="text-align: right;">16 GB</td>
 <td style="text-align: right;">760 GB/sec</td>
 </tr>
 <tr class="odd">
+<td style="text-align: left;"><a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">A10g</a></td>
+<td style="text-align: center;">Ampere GA102</td>
+<td style="text-align: center;">84</td>
+<td style="text-align: right;">96KB</td>
+<td style="text-align: right;">24 GB</td>
+<td style="text-align: right;">760 GB/sec</td>
+</tr>
+<tr class="even">
 <td style="text-align: left;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">A100</a></td>
 <td style="text-align: center;">Ampere A100</td>
 <td style="text-align: center;">108</td>
 <td style="text-align: right;">164KB</td>
-<td style="text-align: right;">40MB</td>
+<td style="text-align: right;">40 / 80 GB</td>
 <td style="text-align: right;">1555 GB/sec</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;"><a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">H100</a></td>
 <td style="text-align: center;">Hopper H100</td>
 <td style="text-align: center;">114</td>
 <td style="text-align: right;">228KB</td>
-<td style="text-align: right;">50MB</td>
+<td style="text-align: right;">80 GB</td>
 <td style="text-align: right;">2039 GB/sec</td>
 </tr>
 </tbody>
 </table>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>While L1 as well as L2 are “on-chip”, SRAM is typically the L1 (shared memory). We use this size for deciding block sizes taking into consideration how <a href="https://modal.com/gpu-glossary/device-software/thread-hierarchy">blocks and SMs interact</a> and how <a href="https://modal.com/gpu-glossary/perf/bank-conflict">resource sharing affects</a> <a href="https://modal.com/gpu-glossary/perf/occupancy">occupancy</a>. The L2 cache is not directly controllable by the programmer.<br>
-In the paper, the authors typically assume <span class="math inline">\(M\)</span> or SRAM memory to be approximately 100KB.</p>
-</div>
-</div>
 <p>Just by looking at these numbers, there a few things that we can expect about performance gains:</p>
 <ol type="1">
-<li>During Inference: On a GPU like T4, even small models like llama3.2-3B that can fit within its VRAM will see only marginal gains at full sequence length (if any) because the block size will have to be very small. Any real improvements would need exploit additional characteristics like sparsity.</li>
+<li>During Inference: On a GPU like T4, even small models like llama3.2-3B that can fit within its VRAM will see only marginal gains at full sequence length (if any) because the block size will have to be very small due to the small SRAM. Any real improvements would need exploit additional characteristics of inference settings.</li>
 <li>During Training: On T4, there is likely no performance gain to be expected when dealing with realistic sequence lengths. The A10 might be only a slightly better budget candidate to T4 even at twice the cost per GPU, but any real training would need something like an A100 or H100.</li>
 <li>On the other hand, very small models / small models in small sequence settings, if run on GPUs like A/H100 using all of the available resource, might not be memory bound in which case <code>FlashAttention</code> might add additional computation steps.</li>
 </ol>

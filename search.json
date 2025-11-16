@@ -32,7 +32,7 @@
     "href": "posts/flash-attention/2025-11-14-notes-on-flash-attention.html#footnotes",
     "title": "Notes on FlashAttention",
     "section": "Footnotes",
-    "text": "Footnotes\n\n\nEquivalent numpy expression: O_i = (l_i[..., np.newaxis] * np.exp(m_i - m_i_new) * O_i + np.exp(m_ij - m_i_new)*(P)) /  l_i_new[..., np.newaxis].↩︎\nModern NVIDIA GPUs have combined L1 data cache and shared memory (SRAM) and the exact memory reserved for both is configurable.↩︎"
+    "text": "Footnotes\n\n\nEquivalent numpy expression: O_i = (l_i[..., np.newaxis] * np.exp(m_i - m_i_new) * O_i + np.exp(m_ij - m_i_new)*(P_ij @ V_j)) /  l_i_new[..., np.newaxis].↩︎\nModern NVIDIA GPUs have combined L1 data cache and shared memory (SRAM) and the exact memory reserved for both is configurable.↩︎"
   },
   {
     "objectID": "index.html",

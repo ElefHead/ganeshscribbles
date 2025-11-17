@@ -316,7 +316,7 @@ f(x^{(k)}) &amp; := [e^{x^{(k)}_1 - m(x^{(k)})} ... e^{x^{(k)}_B - m(x^{(k)})}] 
 </div>
 </div>
 </div>
-<p>The block-wise calculations can be used to calculate the softmax of the full matrix using the normalization statistics <span class="math inline">\((m(x), \ell(x))\)</span>.</p>
+<p>Thus, <code>softmax</code> can be calculated blockwise using the normalization statistics <span class="math inline">\((m(x), \ell(x))\)</span>.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="true" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -346,7 +346,7 @@ f(x) &amp;= [e^{m(x^{(1)}) - m(x)}f(x^{(1)}) e^{m(x^{(2)}) - m(x)}f(x^{(2)})] \\
 </div>
 </div>
 </div>
-<p>The following is a small hand-worked example:</p>
+<p>Here is a small hand-worked example:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="images/blockwise_softmax.png" title="Figure: Example of blockwise softmax using m and l" class="img-fluid figure-img"></p>

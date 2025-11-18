@@ -228,8 +228,7 @@ They note that</p>
 <li>reduce the number of memory access by computing the exact softmax without multiple accesses to the whole input. This helps speed up the forward pass during training as well as inference.</li>
 <li>not store the large intermediate attention matrix for the backward pass. This speeds up the gradient computation during training.</li>
 </ol>
-<p>The authors introduce the <code>FlashAttention</code> <a href="https://modal.com/gpu-glossary/device-software/kernel">kernel</a> that uses <a href="https://www.oreilly.com/library/view/programming-massively-parallel/9780323984638/xhtml/Ch005_93-121_B9780323912310000185.xhtml">tiling</a> to compute softmax over <a href="https://modal.com/gpu-glossary/device-software/thread-block">blocks</a> of the input using a softmax reduction that enables both (1) the incremental calculation of the final softmax matrix without multiple global memory access, as well as (2) storage of block statistics instead of the large intermediate attention matrix for the gradient computation. This also allows for operation fusion allowing the calculation of output attention matrix in one kernel.</p>
-<p>They further prove that <code>FlashAttention</code> requires <span class="math inline">\(O(N^2d^2M^{-1})\)</span> HBM accesses where <span class="math inline">\(d\)</span> is the head dimension and <span class="math inline">\(M\)</span> is the size of SRAM, as compared to <span class="math inline">\(\Omega(Nd + N^2)\)</span> of standard attention.</p>
+<p>The authors introduce the <code>FlashAttention</code> algorithm that uses <a href="https://www.oreilly.com/library/view/programming-massively-parallel/9780323984638/xhtml/Ch005_93-121_B9780323912310000185.xhtml">tiling</a> to compute the streaming softmax over <a href="https://modal.com/gpu-glossary/device-software/thread-block">blocks</a> of the input and enables both (1) the incremental calculation of the final softmax matrix while significantly reducing the number of global memory access making the forward pass more performant, as well as (2) storage of block statistics instead of the large intermediate attention matrix for the gradient computation thus making the backward pass faster eventhough the number of operations increase.</p>
 <section id="standard-attention" class="level2">
 <h2 class="anchored" data-anchor-id="standard-attention">Standard Attention</h2>
 <div class="callout callout-style-default callout-tip callout-titled">
@@ -604,7 +603,40 @@ O(T_rT_cB_rB_cd) &amp;= O(\frac{N}{B_r}\frac{N}{B_c}B_rB_cd) = &amp;&amp; O(N^2d
 <div id="callout-10" class="callout-10-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>The standard softmax requires <span class="math inline">\(\Theta(Nd + N^2)\)</span> for reading <span class="math inline">\(\mathbf{Q},\mathbf{K}\)</span> and writing <span class="math inline">\(\mathbf{S}\)</span>. It then needs <span class="math inline">\(\Theta(N^2)\)</span> for computing <span class="math inline">\(\mathbf{P}\)</span> and finally, another <span class="math inline">\(\Theta(Nd + N^2)\)</span> for computing and writing <span class="math inline">\(\mathbf{O}\)</span>. Overall, the standard softmax incurs <span class="math inline">\(\Theta(Nd + N^2)\)</span> HBM accesses.</p>
-<p>In comparison, the <code>FlashAttention</code> algorithm makes <span class="math inline">\(T_c\)</span> passes over <span class="math inline">\(\mathbf{Q}\)</span> and <span class="math inline">\(\mathbf{O}\)</span> making the HBM accesses here <span class="math inline">\(\Theta(Nd + NdT_c) = \Theta(NdT_c)\)</span>.</p>
+<p>In comparison, the <code>FlashAttention</code> algorithm loads each element from <span class="math inline">\(\mathbf{K},\mathbf{V}\)</span> once and makes <span class="math inline">\(T_c\)</span> passes over <span class="math inline">\(\mathbf{Q}\)</span> and <span class="math inline">\(\mathbf{O}\)</span> and thus the HBM accesses here <span class="math inline">\(\Theta(Nd + NdT_c) = \Theta(NdT_c)\)</span>.</p>
+<p>Within the blockwise iterations, we need <span class="math inline">\(\mathbf{K}_j\)</span> and <span class="math inline">\(\mathbf{V}_j\)</span> of size <span class="math inline">\(B_c \times d\)</span> to fit into the SRAM (on-chip memory). Therefore,</p>
+<p><span class="math display">\[
+\begin{align}
+B_cd &amp;= O(M) &amp;&amp;\Leftrightarrow B_c = O(\frac{M}{d})
+\end{align}
+\]</span></p>
+<p>Similarly, <span class="math inline">\(\mathbf{Q}_i\)</span> and <span class="math inline">\(\mathbf{O}_j\)</span> of size <span class="math inline">\(B_r \times d\)</span> have to fit into the SRAM.<br>
+<span class="math display">\[
+\begin{align}
+B_rd &amp;= O(M) &amp;&amp;\Leftrightarrow B_r = O(\frac{M}{d})
+\end{align}
+\]</span></p>
+<p><span class="math inline">\(\mathbf{S}_{ij} \in \mathbb{R}^{B_r \times B_c}\)</span> also has to fit in the SRAM, and so <span class="math display">\[
+\begin{align}
+B_rB_c = O(M)
+\end{align}
+\]</span></p>
+<p>Setting: <span class="math display">\[
+\begin{align}
+B_c &amp;= \Theta(\frac{M}{d}),&amp;&amp; B_r = \Theta(\text{min}(\frac{M}{d}, \frac{M}{B_c})) = \Theta(\text{min}(\frac{M}{d}, d))
+\end{align}
+\]</span></p>
+<p>We get, <span class="math display">\[
+\begin{align}
+T_c = \frac{N}{B_c} = \Theta(\frac{Nd}{M})
+\end{align}
+\]</span></p>
+<p>And therefore, the number of HBM accesses is:<br>
+<span class="math display">\[
+\begin{align}
+\Theta(NdT_c) = \Theta(\frac{N^2d^2}{M})
+\end{align}
+\]</span></p>
 </div>
 </div>
 </div>

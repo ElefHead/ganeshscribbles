@@ -174,7 +174,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Modified</div>
       <div class="quarto-title-meta-contents">
-        <p class="date-modified">November 17, 2025</p>
+        <p class="date-modified">November 18, 2025</p>
       </div>
     </div>
       
@@ -200,7 +200,7 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#tiling-for-attention-outputs-with-respect-to-blocks" id="toc-tiling-for-attention-outputs-with-respect-to-blocks" class="nav-link" data-scroll-target="#tiling-for-attention-outputs-with-respect-to-blocks">Tiling for attention outputs with respect to blocks</a></li>
   <li><a href="#re-computation-of-s-and-p-for-backward-pass" id="toc-re-computation-of-s-and-p-for-backward-pass" class="nav-link" data-scroll-target="#re-computation-of-s-and-p-for-backward-pass">Re-computation of S and P for backward pass</a></li>
-  <li><a href="#increased-flops-to-overcome-io-bottlenecks" id="toc-increased-flops-to-overcome-io-bottlenecks" class="nav-link" data-scroll-target="#increased-flops-to-overcome-io-bottlenecks">Increased FLOPs to Overcome IO Bottlenecks</a></li>
+  <li><a href="#decreased-memory-accesses-for-improved-performance" id="toc-decreased-memory-accesses-for-improved-performance" class="nav-link" data-scroll-target="#decreased-memory-accesses-for-improved-performance">Decreased Memory Accesses for Improved Performance</a></li>
   </ul></li>
   </ul></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
@@ -563,21 +563,59 @@ dk_j = \underset{j}{\sum} dS_{ij}q_{i} &amp;&amp;= \underset{j}{\sum} P_{ij}(dP_
 </ol>
 </section>
 </section>
-<section id="increased-flops-to-overcome-io-bottlenecks" class="level3">
-<h3 class="anchored" data-anchor-id="increased-flops-to-overcome-io-bottlenecks">Increased FLOPs to Overcome IO Bottlenecks</h3>
-<p>In the paper, the authors show the effect of the forward runtime of <code>FlashAttention</code> using the settings on an A100 GPU</p>
-<ul>
-<li>sequence length, <span class="math inline">\(N = 1024\)</span></li>
-<li>head dimensions, <span class="math inline">\(d = 64\)</span></li>
-<li>num_heads <span class="math inline">\(= 16\)</span></li>
-<li>batch_size <span class="math inline">\(= 64\)</span></li>
-</ul>
-<p>From the graph, it is visible that:</p>
+<section id="decreased-memory-accesses-for-improved-performance" class="level3">
+<h3 class="anchored" data-anchor-id="decreased-memory-accesses-for-improved-performance">Decreased Memory Accesses for Improved Performance</h3>
+<section id="quantifying-the-complexity" class="level4">
+<h4 class="anchored" data-anchor-id="quantifying-the-complexity">Quantifying the Complexity</h4>
+<p>The forward algorithm has the same time complexity <span class="math inline">\(O(N^2d)\)</span> as the standard softmax algorithm and uses <span class="math inline">\(O(N)\)</span> extra space to save <span class="math inline">\((m, \ell)\)</span>.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Calculating the time complexity
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-9" class="callout-9-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>The standard softmax with <span class="math inline">\(\mathbf{Q},\mathbf{K},\mathbf{V} \in \mathbb{R}^{N \times d}\)</span> takes <span class="math inline">\(O(N^2d)\)</span> for <span class="math inline">\(\mathbf{QK}^T\)</span><a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>, <span class="math inline">\(O(N^2)\)</span> for <span class="math inline">\(\text{softmax}(\mathbf{S})\)</span>, <span class="math inline">\(\text{rowsum}(\mathbf{S})\)</span>, <span class="math inline">\(\text{rowmax}(\mathbf{S})\)</span> and then <span class="math inline">\(O(N^2d)\)</span> again for <span class="math inline">\(\mathbf{PV}\)</span>.<br>
+The tiled, blockwise softmax used in <code>FlashAttention</code> is also dominated by the matrix multiplication. It operates on <span class="math inline">\(\mathbf{Q} \in \mathbb{R}^{B_r \times d}\)</span> and <span class="math inline">\(\mathbf{K},\mathbf{V} \in \mathbb{R}^{B_c \times d}\)</span>, taking <span class="math inline">\(O(B_rB_cd)\)</span> for <span class="math inline">\(\mathbf{Q}_i\mathbf{K}_j^T\)</span>, <span class="math inline">\(\tilde{\mathbf{P}}_{ij}\mathbf{V}_j\)</span> and <span class="math inline">\(O(B_rB_c)\)</span> for the operations on <span class="math inline">\(\mathbf{S}_{ij}\)</span> like calculating <span class="math inline">\(\text{softmax}, \ell, m\)</span>, making the time-complexity here <span class="math inline">\(O(B_rB_cd)\)</span>. These are looped <span class="math inline">\(T_rT_c\)</span> times, making the final time complexity:</p>
+<p><span class="math display">\[
+\begin{align}
+O(T_rT_cB_rB_cd) &amp;= O(\frac{N}{B_r}\frac{N}{B_c}B_rB_cd) = &amp;&amp; O(N^2d)
+\end{align}
+\]</span></p>
+</div>
+</div>
+</div>
+<p>The increase in performance comes from the reduction in HBM accesses. The standard softmax incurs <span class="math inline">\(\Theta(Nd + N^2)\)</span> HBM accesses whereas the <code>FlashAttention</code> algorithm requires <span class="math inline">\(\Theta(\frac{N^2d^2}{M})\)</span> where <span class="math inline">\(M\)</span> is the size of SRAM. In settings where <span class="math inline">\(M \gg d\)</span>, this algorithm should lead to significantly reduced memory accesses over the standard attention algorithm.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Calculating the IO complexity
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-10" class="callout-10-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>The standard softmax requires <span class="math inline">\(\Theta(Nd + N^2)\)</span> for reading <span class="math inline">\(\mathbf{Q},\mathbf{K}\)</span> and writing <span class="math inline">\(\mathbf{S}\)</span>. It then needs <span class="math inline">\(\Theta(N^2)\)</span> for computing <span class="math inline">\(\mathbf{P}\)</span> and finally, another <span class="math inline">\(\Theta(Nd + N^2)\)</span> for computing and writing <span class="math inline">\(\mathbf{O}\)</span>. Overall, the standard softmax incurs <span class="math inline">\(\Theta(Nd + N^2)\)</span> HBM accesses.</p>
+<p>In comparison, the <code>FlashAttention</code> algorithm makes <span class="math inline">\(T_c\)</span> passes over <span class="math inline">\(\mathbf{Q}\)</span> and <span class="math inline">\(\mathbf{O}\)</span> making the HBM accesses here <span class="math inline">\(\Theta(Nd + NdT_c) = \Theta(NdT_c)\)</span>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="implications-for-the-user" class="level4">
+<h4 class="anchored" data-anchor-id="implications-for-the-user">Implications for the user</h4>
 <ol type="1">
-<li>Increasing the block size decreases the HBM accesses.</li>
-<li>Fewer HBM accesses result in faster runtime, up to a point - this is most likely because at higher block sizes the bottlenecks shift from memory bandwidth (to arithmetic operations in the ideal case, or, in the worst case, resource constraints).</li>
+<li>Larger block sizes <span class="math inline">\(B_c\)</span> and <span class="math inline">\(B_r\)</span> will lead to lesser HBM accesses and increases amount of GPU time spent on FLOPs. The amount of available SRAM per chip dictates how large the block sizes can be.</li>
+<li>Increased FLOPs will result in faster runtime till the bottlenecks shift from memory bandwidth (to arithmetic operations in the ideal case, or, in the worst case, resource constraints).</li>
 </ol>
-<p>It is useful to consider the implications using commonly used GPUs.</p>
+<p>When we consider some commonly used GPUs, there a few things that we can expect about performance gains:</p>
 <table class="caption-top table">
 <caption>Commonly used NVIDIA GPUs with their SRAM, VRAM, and IO Bandwidth numbers from their white papers.</caption>
 <thead>
@@ -585,7 +623,7 @@ dk_j = \underset{j}{\sum} dS_{ij}q_{i} &amp;&amp;= \underset{j}{\sum} P_{ij}(dP_
 <th style="text-align: left;">GPU</th>
 <th style="text-align: center;">Arch</th>
 <th style="text-align: center;">SMs</th>
-<th style="text-align: right;">SRAM<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></th>
+<th style="text-align: right;">SRAM<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></th>
 <th style="text-align: right;">VRAM</th>
 <th style="text-align: right;">Memory Bandwidth</th>
 </tr>
@@ -633,12 +671,12 @@ dk_j = \underset{j}{\sum} dS_{ij}q_{i} &amp;&amp;= \underset{j}{\sum} P_{ij}(dP_
 </tr>
 </tbody>
 </table>
-<p>Just by looking at these numbers, there a few things that we can expect about performance gains:</p>
 <ol type="1">
 <li>During Inference: On a GPU like T4, even small models like llama3.2-3B that can fit within its VRAM will see only marginal gains at full sequence length (if any) because the block size will have to be very small due to the small SRAM. Any real improvements would need exploit additional characteristics of inference settings.</li>
 <li>During Training: On T4, there is likely no performance gain to be expected when dealing with realistic sequence lengths. The A10 might be only a slightly better budget candidate to T4 even at twice the cost per GPU, but any real training would need something like an A100 or H100.</li>
 <li>On the other hand, very small models / small models in small sequence settings, if run on GPUs like A/H100 using all of the available resource, might not be memory bound in which case <code>FlashAttention</code> might add additional computation steps.</li>
 </ol>
+</section>
 </section>
 </section>
 </section>
@@ -651,6 +689,7 @@ dk_j = \underset{j}{\sum} dS_{ij}q_{i} &amp;&amp;= \underset{j}{\sum} P_{ij}(dP_
 <li><a href="https://www.oreilly.com/library/view/programming-massively-parallel/9780323984638/">Hwu, Wen-mei, and David Kirk. Programming Massively Parallel Processors: A Hands-on Approach. 4th ed.&nbsp;Waltham, MA: Morgan Kaufmann, 2023.</a></li>
 <li><a href="http://arxiv.org/abs/1805.02867">Milakov, Maxim, and Natalia Gimelshein. “Online Normalizer Calculation for Softmax.” Preprint, submitted May 2018. arXiv:1805.02867. http://arxiv.org/abs/1805.02867.</a></li>
 <li>NVIDIA GPU white-papers (<a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/">Turing T4</a>, <a href="https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf">Volta GV100</a>, <a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">Ampere A10x</a>, <a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">Ampere A100</a>, <a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">Hopper H100</a>)</li>
+<li><a href="https://www.stat.cmu.edu/~ryantibs/convexopt-F18/scribes/Lecture_19.pdf">Bohan Li, Donghan Yu, Ge Huang, and Ryan Tibshirani: Fall 2015 Convex Optimization Notes for Lecture 19.</a></li>
 </ul>
 
 
@@ -662,7 +701,8 @@ dk_j = \underset{j}{\sum} dS_{ij}q_{i} &amp;&amp;= \underset{j}{\sum} P_{ij}(dP_
 <ol>
 <li id="fn1"><p>Equivalent numpy expression: <code>O_i = (l_i[..., np.newaxis] * np.exp(m_i - m_i_new) * O_i + np.exp(m_ij - m_i_new)*(P_ij @ V_j)) /  l_i_new[..., np.newaxis]</code>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn2"><p><code>softmax</code> is a vector function and the Jacobian is the matrix formed by the partial derivatives of a vector function.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3"><p>Modern NVIDIA GPUs have combined <a href="https://modal.com/gpu-glossary/device-hardware/l1-data-cache">L1 data cache</a> and shared memory (SRAM) and the exact memory reserved for both is configurable.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>Given <span class="math inline">\(A \in \mathbb{R}^{m \times n}, B \in \mathbb{R}^{n \times p}\)</span>, <a href="https://www.stat.cmu.edu/~ryantibs/convexopt-F18/scribes/Lecture_19.pdf">then total operation count for matrix-multiplication</a> <span class="math inline">\(AB\)</span> is <span class="math inline">\(2mnp\)</span>.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>Modern NVIDIA GPUs have combined <a href="https://modal.com/gpu-glossary/device-hardware/l1-data-cache">L1 data cache</a> and shared memory (SRAM) and the exact memory reserved for both is configurable.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

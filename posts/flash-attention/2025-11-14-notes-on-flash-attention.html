@@ -495,12 +495,12 @@ J(y) &amp;= \text{diag}(y) - yy^T
 <p>Since <span class="math inline">\(P_{i:} = \text{softmax}(S_{i:})\)</span>, we have:</p>
 <p><span class="math display">\[
 \begin{align}
-dS_{i:} &amp;= (\text{diag}(P_{i:}) - P_{i:}P^{T}_{i:})dP_{i:} &amp;&amp;= P_{i:} \odot dP_{i:} - (P^TdP_{i:})P_{i:}
+dS_{i:} &amp;= (\text{diag}(P_{i:}) - P_{i:}P^{T}_{i:})dP_{i:} = P_{i:} \odot dP_{i:} - (P^TdP_{i:})P_{i:}
 \end{align}
 \]</span> where <span class="math inline">\(\odot\)</span> denotes pointwise multiplication.</p>
 <p>Define <span class="math display">\[
 \begin{align}
-D_{i} &amp;= P^{T}_{i:}dP_{i:} &amp;&amp;= \underset{j}{\sum} \frac{e^{q^T_ik_j}}{\ell_i} do^T_iv_j &amp;&amp; = do^T_i \underset{j}{\sum} \frac{e^{q^T_ik_j}}{\ell_i} v_j &amp;&amp; = do^T_io_i
+D_{i} &amp;= P^{T}_{i:}dP_{i:} = \underset{j}{\sum} \frac{e^{q^T_ik_j}}{\ell_i} do^T_iv_j = do^T_i \underset{j}{\sum} \frac{e^{q^T_ik_j}}{\ell_i} v_j = do^T_io_i
 \end{align}
 \]</span></p>
 <p>then,<br>
@@ -511,21 +511,21 @@ dS_{i:} &amp;= P_{i:} \odot dP_{i:} - D_iP_{i:}
 \]</span></p>
 <p>Making <span class="math display">\[
 \begin{align}
-dS_{ij} &amp;= P_{ij}dP_{ij} - D_iP_{ij} &amp;&amp;= P_{ij}(dP_{ij} - D_{i})
+dS_{ij} &amp;= P_{ij}dP_{ij} - D_iP_{ij} = P_{ij}(dP_{ij} - D_{i})
 \end{align}
 \]</span></p>
 <p>Now we can calculate the gradients for <span class="math inline">\(\mathbf{dQ}\)</span> and <span class="math inline">\(\mathbf{dK}\)</span>. <span class="math inline">\(S_{ij} = q^T_ik_j\)</span>, therefore<br>
 <span class="math display">\[
 \begin{align}
-dq_i = \underset{j}{\sum} dS_{ij}k_{j} &amp;&amp;= \underset{j}{\sum} P_{ij}(dP_{ij} - D_i)k_j &amp;&amp;= \underset{j}{\sum}\frac{e^{q^{T}_ik_j}}{\ell_i} (do^T_iv_j - D_i)k_j
+dq_i = \underset{j}{\sum} dS_{ij}k_{j} = \underset{j}{\sum} P_{ij}(dP_{ij} - D_i)k_j = \underset{j}{\sum}\frac{e^{q^{T}_ik_j}}{\ell_i} (do^T_iv_j - D_i)k_j
 \end{align}
 \]</span></p>
 <p>and similarly, <span class="math display">\[
 \begin{align}
-dk_j = \underset{j}{\sum} dS_{ij}q_{i} &amp;&amp;= \underset{j}{\sum} P_{ij}(dP_{ij} - D_i)q_i &amp;&amp;= \underset{j}{\sum} \frac{e^{q^T_ik_j}}{\ell_i} (do^T_iv_j - D_i)q_i
+dk_j = \underset{j}{\sum} dS_{ij}q_{i} = \underset{j}{\sum} P_{ij}(dP_{ij} - D_i)q_i = \underset{j}{\sum} \frac{e^{q^T_ik_j}}{\ell_i} (do^T_iv_j - D_i)q_i
 \end{align}
 \]</span></p>
-<p>This, the backward pass can be computed with <span class="math inline">\(O(N)\)</span> extra memory.</p>
+<p>Thus, the backward pass can be computed with <span class="math inline">\(O(N)\)</span> extra memory.</p>
 </div>
 </div>
 </div>

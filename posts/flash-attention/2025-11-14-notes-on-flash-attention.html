@@ -174,7 +174,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Modified</div>
       <div class="quarto-title-meta-contents">
-        <p class="date-modified">November 18, 2025</p>
+        <p class="date-modified">November 20, 2025</p>
       </div>
     </div>
       
@@ -202,6 +202,10 @@ window.Quarto = {
   <li><a href="#re-computation-of-s-and-p-for-backward-pass" id="toc-re-computation-of-s-and-p-for-backward-pass" class="nav-link" data-scroll-target="#re-computation-of-s-and-p-for-backward-pass">Re-computation of S and P for backward pass</a></li>
   <li><a href="#decreased-memory-accesses-for-improved-performance" id="toc-decreased-memory-accesses-for-improved-performance" class="nav-link" data-scroll-target="#decreased-memory-accesses-for-improved-performance">Decreased Memory Accesses for Improved Performance</a></li>
   </ul></li>
+  </ul></li>
+  <li><a href="#flashattention-2" id="toc-flashattention-2" class="nav-link" data-scroll-target="#flashattention-2">FlashAttention-2</a>
+  <ul class="collapse">
+  <li><a href="#separating-matrix-and-non-matrix-ops-wip" id="toc-separating-matrix-and-non-matrix-ops-wip" class="nav-link" data-scroll-target="#separating-matrix-and-non-matrix-ops-wip">Separating Matrix and Non-Matrix Ops [WIP]</a></li>
   </ul></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
@@ -663,11 +667,11 @@ T_c = \frac{N}{B_c} = \Theta(\frac{Nd}{M})
 <tbody>
 <tr class="odd">
 <td style="text-align: left;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf">T4</a></td>
-<td style="text-align: center;">Turing TU104</td>
+<td style="text-align: center;">Tesla T4</td>
 <td style="text-align: center;">46</td>
 <td style="text-align: right;">64KB</td>
 <td style="text-align: right;">16 GB</td>
-<td style="text-align: right;">616 GB/sec</td>
+<td style="text-align: right;">320 GB/sec</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><a href="https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf">V100</a></td>
@@ -679,11 +683,11 @@ T_c = \frac{N}{B_c} = \Theta(\frac{Nd}{M})
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">A10g</a></td>
-<td style="text-align: center;">Ampere GA102</td>
+<td style="text-align: center;">Ampere GA10x</td>
 <td style="text-align: center;">84</td>
 <td style="text-align: right;">96KB</td>
 <td style="text-align: right;">24 GB</td>
-<td style="text-align: right;">760 GB/sec</td>
+<td style="text-align: right;">600 GB/sec</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">A100</a></td>
@@ -712,6 +716,67 @@ T_c = \frac{N}{B_c} = \Theta(\frac{Nd}{M})
 </section>
 </section>
 </section>
+<section id="flashattention-2" class="level1">
+<h1>FlashAttention-2</h1>
+<p>This paper that was published in 2023 tries to make <code>FlashAttention</code> even more efficient. It looks at modern GPU architectures to introduce better usage of specialized on-chip devices and enable better parallelism and work partitioning.</p>
+<p>As motivation, the author points out that the forward algorithm reaches only 30-50% of the theoretical maximum FLOPs/seconds and the backward algorithm reaches only 25-35% of the maximum FLOPs/seconds of an NVIDIA A100 GPU. They contrast this with GEMM, which typically reaches up to 80-90% of the theoretical maximum throughput.</p>
+<section id="separating-matrix-and-non-matrix-ops-wip" class="level2">
+<h2 class="anchored" data-anchor-id="separating-matrix-and-non-matrix-ops-wip">Separating Matrix and Non-Matrix Ops [WIP]</h2>
+<p>The first insight is that modern GPUs have on-chip devices specifically to optimize matrix operations(e.g.&nbsp;<a href="https://modal.com/gpu-glossary/device-hardware/tensor-core">NVIDIA GPUs have Tensor Cores</a> and <a href="https://rocm.blogs.amd.com/software-tools-optimization/matrix-cores/README.html">AMD GPUs have matrix cores</a>) allowing matrix operations to run at a much higher throughput than non-matrix operations. The authors note that on an A100, a non-matmul FLOP (FP32) is 16x more expensive than a matmul FLOP.</p>
+<table class="caption-top table">
+<caption>Commonly used NVIDIA GPUs with their peak theoretical throughputs</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">GPU</th>
+<th style="text-align: center;">Arch</th>
+<th style="text-align: right;">FP16 MMA</th>
+<th style="text-align: right;">BF16 MMA</th>
+<th style="text-align: right;">Tensor FP16MMA</th>
+<th style="text-align: right;">FP32 MMA</th>
+<th style="text-align: right;">Tensor FP32MMA</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf">T4</a></td>
+<td style="text-align: center;">Tesla T4</td>
+<td style="text-align: right;">16.2</td>
+<td style="text-align: right;">16.2</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: right;">8.1</td>
+<td style="text-align: right;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">A10g</a></td>
+<td style="text-align: center;">Ampere GA10x</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">70</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">A100</a></td>
+<td style="text-align: center;">Ampere A100</td>
+<td style="text-align: right;">78</td>
+<td style="text-align: right;">39</td>
+<td style="text-align: right;">312</td>
+<td style="text-align: right;">19.5</td>
+<td style="text-align: right;">312</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">H100</a></td>
+<td style="text-align: center;">Hopper H100</td>
+<td style="text-align: right;">133.8</td>
+<td style="text-align: right;">133.8</td>
+<td style="text-align: right;">989.4</td>
+<td style="text-align: right;">66.9</td>
+<td style="text-align: right;">494.7</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
 <section id="references" class="level1">
 <h1>References</h1>
 <ul>
@@ -720,8 +785,9 @@ T_c = \frac{N}{B_c} = \Theta(\frac{Nd}{M})
 <li><a href="https://modal.com/gpu-glossary">Modal, GPU Glossary</a></li>
 <li><a href="https://www.oreilly.com/library/view/programming-massively-parallel/9780323984638/">Hwu, Wen-mei, and David Kirk. Programming Massively Parallel Processors: A Hands-on Approach. 4th ed.&nbsp;Waltham, MA: Morgan Kaufmann, 2023.</a></li>
 <li><a href="http://arxiv.org/abs/1805.02867">Milakov, Maxim, and Natalia Gimelshein. “Online Normalizer Calculation for Softmax.” Preprint, submitted May 2018. arXiv:1805.02867. http://arxiv.org/abs/1805.02867.</a></li>
-<li>NVIDIA GPU white-papers (<a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/">Turing T4</a>, <a href="https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf">Volta GV100</a>, <a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">Ampere A10x</a>, <a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">Ampere A100</a>, <a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">Hopper H100</a>)</li>
+<li>NVIDIA GPU white-papers (<a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/">Tesla T4</a>, <a href="https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf">Volta GV100</a>, <a href="https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf">Ampere A10x</a>, <a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf">Ampere A100</a>, <a href="https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c">Hopper H100</a>)</li>
 <li><a href="https://www.stat.cmu.edu/~ryantibs/convexopt-F18/scribes/Lecture_19.pdf">Bohan Li, Donghan Yu, Ge Huang, and Ryan Tibshirani: Fall 2015 Convex Optimization Notes for Lecture 19.</a></li>
+<li><a href="https://arxiv.org/abs/2307.08691">Dao, Tri. “FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning.” Preprint, submitted July, 2023. arXiv:2307.08691. https://arxiv.org/abs/2307.08691.</a></li>
 </ul>
 
 
